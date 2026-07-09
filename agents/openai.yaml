@@ -1,0 +1,4 @@
+interface:
+  display_name: "Intent Transfer Prompting"
+  short_description: "Write agent handoffs with intent and proof"
+  default_prompt: "Use $intent-transfer-prompting to draft a Codex handoff with calibrated freedom and clear evidence gates."
