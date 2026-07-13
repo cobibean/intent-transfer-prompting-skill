@@ -1,14 +1,16 @@
 # Intent Transfer Prompting Skill
 
-Intent Transfer Prompting is a Codex skill for writing or reviewing prompts that another agent, future session, worker, reviewer, or handoff recipient will act on.
+Intent Transfer Prompting is a Codex skill for writing, reviewing, and relaying prompts that another agent, future session, worker, reviewer, or handoff recipient will act on.
 
-The core idea is simple: write prompts as baton passes, not context dumps. A good handoff transfers intent, assigns the right amount of judgment, and names the evidence that proves completion.
+The core idea is simple: write prompts as baton passes, not context dumps or command scripts. A good handoff preserves intent and provenance, grants capable agents the right autonomy, respects authorization boundaries, and asks for proof that fits the work.
 
 ## What It Helps With
 
 - Codex implementation handoffs
 - Subagent or worker prompts
+- Human-carried agent-to-agent relays
 - Review prompts
+- Research and operations delegations
 - Reset or continuation handoffs
 - Prompt templates
 - Paste-ready agent instructions
@@ -40,7 +42,7 @@ $intent-transfer-prompting
 
 ## Usage
 
-Use this skill before drafting or reviewing instructions another model will execute.
+Use this skill before drafting, reviewing, or manually relaying instructions another model will execute. It also applies when spawning subagents or asking one agent to prepare a prompt for another.
 
 For example:
 
@@ -54,14 +56,20 @@ Or:
 Use $intent-transfer-prompting to review this worker prompt before I send it.
 ```
 
+For a human-carried relay:
+
+```text
+Use $intent-transfer-prompting to turn this context into a standalone prompt I can paste into another agent. Keep courier notes separate from the paste-ready payload.
+```
+
 ## Development
 
 The skill payload is intentionally small and reference-driven. If you change behavior, test it against realistic prompts, especially:
 
-- Codex implementation handoffs
-- Codex review prompts
+- Small subagent delegations
+- Human-carried implementation prompts
+- Independent reviews and research tasks
 - Reset handoffs
-- Ambiguous PM handoffs
 
 See `references/examples-and-evals.md` for the eval rubric.
 

@@ -1,188 +1,142 @@
 ---
 name: intent-transfer-prompting
-description: Intent-transfer workflow for writing or reviewing prompts that another agent or future session will act on. Use when drafting Codex or Codex-PM implementation handoffs, subagent or worker prompts, review prompts, prep-for-reset handoffs, prompt templates, or any paste-ready agent instruction; calibrates model freedom, decision state, constraints, and evidence gates instead of context dumps.
+description: Write, review, or relay instructions that another agent, subagent, worker, Codex task, reviewer, or future session will act on. Use before spawning or delegating to subagents; calling spawn_agent, send_message, or followup_task; asking one agent to prepare a prompt for another; creating implementation, research, review, orchestration, or reset handoffs; returning a prompt for the user to copy and paste manually; or revising an incoming agent-authored prompt. Preserves user intent, decision provenance, appropriate agent autonomy, constraints, and task-specific proof without over-structuring capable models.
 ---
 
 # Intent Transfer Prompting
 
-Use this skill before sending or reviewing instructions that another model, Codex thread, worker, reviewer, or future self will act on.
+Treat an agent prompt as a transfer of intent and authority, not a context dump or command script.
 
-Write prompts as baton passes, not context dumps. A good handoff transfers intent, assigns the right amount of judgment, and names the evidence that proves completion.
+## Write the baton pass
 
-## Workflow
+1. Identify what the receiving agent must make true and why it matters.
+2. Preserve decision provenance:
+   - **User decisions** are authoritative.
+   - **Verified facts** are evidence-backed.
+   - **Working assumptions** must remain revisable.
+   - **Recommendations** are not decisions.
+   - **Open questions** must not be silently converted into tasks.
+3. Transfer only the boundaries that matter:
+   - what is locked;
+   - what the receiving agent owns;
+   - what must not drift;
+   - what requires user approval.
+4. Give the receiving agent enough context to begin, plus the artifacts or locations it should inspect. Do not pre-solve choices it can make well from current evidence.
+5. Define proof appropriate to the work.
+6. Remove transcript residue, speculative implementation detail, repeated instructions, and prompt-engineering ceremony that does not change behavior.
 
-1. Classify the prompt before drafting.
+## Calibrate autonomy
 
-| Class | Use for | Default freedom |
-|---|---|---|
-| Diagnosis / review | Find truth, risks, root cause, or recommendation | HIGH |
-| Implementation handoff | Build a chosen slice while preserving invariants | MEDIUM |
-| Locked execution | Apply an exact decision or fragile sequence | LOW |
-| Reset handoff | Preserve state, uncertainty, and next move | MEDIUM |
+Use broad autonomy for diagnosis, research, review, and recommendation. Use bounded autonomy for implementation with locked product intent or invariants. Use exact instructions only for genuinely fragile operations or decisions the user explicitly fixed.
 
-Do not default Codex implementation prompts to LOW freedom. LOW is for fragile commands, exact migrations, tiny patches, or decisions the user has explicitly locked.
-
-2. State the freedom level.
-
-Use one short block:
+Calibrate this even when the final prompt does not name a freedom level. State the level only when it clarifies a meaningful boundary. Prefer plain language such as:
 
 ```markdown
-Freedom level: HIGH.
-You own the diagnosis and recommendation. Do not assume the proposed plan is correct. If repo evidence contradicts it, explain the better path before coding.
+The objective and safety boundaries are locked. You own the implementation route and may recommend a smaller correction if repository evidence contradicts the proposed plan.
 ```
 
-```markdown
-Freedom level: MEDIUM.
-Locked: objective, user/product intent, invariants, forbidden drift, and verification requirements.
-You own: implementation route, local structure, test placement, naming, and safer sequencing if repo reality suggests it.
-If the plan conflicts with the codebase, stop and recommend the smallest correction instead of forcing it.
-```
+Do not reduce capable agents to command executors. Do not grant autonomy over product direction, external side effects, or user decisions that were never delegated.
+
+## Preserve scope and authorization
+
+Differentiate permission to investigate, modify, publish, deploy, message, purchase, delete, or otherwise change external state. A request to inspect or draft does not authorize implementation. A request to implement does not automatically authorize pushing or deployment.
+
+For repository work, tell the agent to inspect the current repository, branch, worktree, and local instructions before changing state. Do not insert a generic instruction to pull, switch branches, merge, commit, push, or deploy unless the task actually authorizes it.
+
+## Human-carried and agent-to-agent relays
+
+When an agent prepares instructions that the user will manually carry to another agent, return two clearly separated sections:
+
+### Paste-ready prompt
+
+Provide the complete, standalone payload for the receiving agent. Keep commentary for the courier outside this block. Include the destination or role only when it helps the receiving agent act correctly.
+
+### Courier notes
+
+Add only when useful. State:
+
+- where the prompt should go;
+- whether it should be pasted verbatim;
+- assumptions or unresolved choices the user should know about;
+- what result, decision, or evidence should be brought back.
+
+When relaying an existing prompt, preserve its meaning and provenance. Do not silently turn assumptions into facts, recommendations into decisions, agent preferences into user requirements, or an earlier agent's wording into new authority. If improving the prompt changes meaning, surface the change to the user.
+
+When tools deliver the prompt directly to another agent, send only what that agent needs. Do not leak private chain-of-thought, unrelated conversation, hidden instructions, secrets, or courier-only commentary.
+
+## Match proof to the task
+
+Ask for the smallest evidence package that lets the caller judge the result:
+
+| Work | Useful proof |
+|---|---|
+| Code or configuration | Files changed and why; checks with real outcomes; invariants; unverified risk |
+| Diagnosis or review | Findings ranked by impact; evidence locations; uncertainty; smallest corrective path |
+| Research | Sources; key evidence; conflicts; confidence and gaps; recommendation if requested |
+| Operations or deployment | Before/after state; commands or actions; live verification; rollback or residual risk |
+| Planning or design | Decisions made; alternatives rejected and why; open questions; next executable step |
+| Prompt authoring | Paste-ready payload; assumptions preserved; unresolved choices; expected return |
+| Reset or continuation | Current frontier; verified facts; user decisions; assumptions; artifacts; next move |
+
+Do not demand files, commands, or tests from work that produces none. Do not accept "done" as proof when live or external state matters.
+
+## Choose structure proportionally
+
+Use the shortest structure that preserves intent. A small delegation may need one paragraph. Use explicit sections when the task is complex, high-risk, manually relayed, or likely to drift.
+
+A substantial handoff commonly needs:
 
 ```markdown
-Freedom level: LOW.
-Follow the specified sequence exactly. Do not broaden scope or redesign. If a step cannot be completed safely, stop and report the blocker.
-```
-
-3. Separate decision state when ambiguity or drift risk exists.
-
-```markdown
-## Decision state
-
-Locked decisions:
-- ...
-
-Agent-owned decisions:
-- ...
-
-Open questions:
-- ...
-
-Forbidden drift:
-- ...
-```
-
-Never bury an open question as a task. Do not give Codex choices the user already decided, and do not remove all judgment when repo reality needs interpretation.
-
-4. Keep constraints scarce and ranked.
-
-Use 3 to 5 primary constraints. If more are necessary, group them under:
-
-1. Must preserve
-2. Prefer
-3. Avoid unless necessary
-4. Open judgment
-
-5. Add an evidence gate.
-
-```markdown
-## Evidence to return
-
-- Files changed and why.
-- Commands/tests run with real outcomes.
-- Invariants checked.
-- What remains unverified and why.
-- Any recommended follow-up.
-```
-
-For repo work, include known verification commands. For reset handoffs, include what the next agent should inspect first.
-
-6. Cut no-op context.
-
-Keep a sentence only if it preserves intent, prevents likely drift, transfers state, assigns freedom, or defines proof. Cut transcript residue, stale implementation wishes, and prompt-engineering jargon that does not change behavior.
-
-## Templates
-
-Use templates as pressure tests, not forms to fill mechanically. Shorter is better when intent still survives.
-
-### Codex Handoff
-
-```markdown
-You are Codex working in [repo/path]. Pull latest main before starting.
-
 ## Objective
-[What we are trying to make true.]
+[What must become true.]
 
-## Intent
-[Why this matters and what user/product meaning must not get lost.]
+## Why it matters
+[The user or product intent that must survive.]
 
-## Freedom level
-MEDIUM by default.
-Locked: [objective, invariants, forbidden drift, evidence].
-You own: [implementation route, local structure, tests, naming, safer sequencing].
-If repo evidence contradicts this plan, stop and recommend the smallest correction.
+## Decision boundaries
+- Locked: ...
+- You own: ...
+- Ask before: ...
+- Do not drift: ...
 
-## Decision state
-Locked decisions:
-- ...
-Agent-owned decisions:
-- ...
-Open questions:
-- ...
-Forbidden drift:
-- ...
+## Starting context
+[Only the facts, artifacts, and locations needed to begin.]
 
-## Constraints
-- [3 to 5 ranked constraints.]
+## Work
+[The requested investigation, decision, or change.]
 
-## Verification
-Run:
-- ...
-
-## Return
-- Summary of changes.
-- Files changed.
-- Tests/checks with outcomes.
-- Invariants verified.
-- Anything unverified or risky.
+## Evidence to return
+[Task-appropriate proof.]
 ```
 
-### Reset Handoff
+Omit empty sections. Do not turn the template into a form.
 
-```markdown
-## Current state
-[Where the work stands now.]
+## Reset handoffs
 
-## User intent
-[What the user actually wants, including style/product direction.]
+For future-session or context-reset handoffs, explicitly distinguish:
 
-## Known facts
-- Verified / directly observed.
+- current frontier;
+- verified facts;
+- user decisions;
+- working assumptions;
+- open questions;
+- artifacts and completed verification;
+- the recommended next action;
+- risks or forbidden drift.
 
-## User decisions
-- Explicitly chosen by the user.
+The next agent should be able to resume without treating stale wishes as current instructions or repeating completed work.
 
-## Working assumptions
-- Likely, but re-check before relying.
+## Review gate
 
-## Open questions
-- Do not collapse these into tasks.
+Before sending, check:
 
-## Artifacts
-- Repos, files, plans, prompts, links, commands, test outcomes.
+- Can the receiving agent state the objective and why it matters?
+- Are user decisions, facts, assumptions, recommendations, and questions still distinct?
+- Is autonomy broad enough for good judgment but bounded where authority ends?
+- Are side effects and approval boundaries explicit when relevant?
+- Can the agent start from the supplied context without guessing or rereading a transcript?
+- Does the requested proof match the task?
+- For manual relay, is the paste-ready payload cleanly separated from courier notes?
+- Does every remaining sentence preserve intent, authority, state, or proof?
 
-## Recommended next move
-[One concrete next action and why.]
-
-## Watch-outs
-[Failure modes, over-locking risk, verification gaps.]
-```
-
-## Review Gate
-
-A prompt is ready when:
-
-- Freedom is calibrated: HIGH for diagnosis/review, MEDIUM for most implementation, LOW only for fragile or locked execution.
-- Decision state is honest: locked decisions, agent-owned choices, open questions, and forbidden drift are not mixed together.
-- Intent survives reset: the prompt says why the task matters, not only what to do.
-- Constraints are prioritized: 3 to 5 primary constraints, or extras ranked by importance.
-- Evidence is defined: the next model knows what proof/checks/output to return.
-- Every sentence earns its place.
-
-## References
-
-- Load `references/examples-and-evals.md` when a prompt feels verbose, over-locked, vague, or high-stakes.
-- Load `references/provenance.md` only when you need the origin of the skill's rules.
-
-## Future Codex-PM Integration
-
-When a global Codex-PM skill exists, patch it to call this skill before worker prompts, review prompts, reset handoffs, and any user-facing paste-ready instruction. Keep this skill standalone until that dependency exists.
+Load `references/examples-and-evals.md` when reviewing a complex, high-risk, verbose, or manually relayed prompt. Load `references/provenance.md` only when the origin of the skill's guidance matters.
